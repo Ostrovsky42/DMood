@@ -2,7 +2,8 @@ package libiary
 
 const HelpText string= "/set_rating- Fill in the rating, description of the day and new ideas once a day\n"+
 "/change_rating- If you made a mistake or decided to change the assessment of the day\n"+
-"/get_rating- Get all records\n"
+"/get_rating- Get all records\n"+
+"/change_notification- Change notification time\""
 //"/reg-\n"
 
 const HelloText string="Hello, this is a mood diary, it is currently under development.\n"+
@@ -15,4 +16,4 @@ const HelloTextRUS string="Привет, это дневник настроен�
 "чтобы увидеть доступные команды нажмите /help\n"+
 "Если вы хотите, чтобы я начал записывать ваше настроение нажмите\n/reg\n"
 
-const RatingText string="How are you today? send number 1-5"
+const RatingText string="How are you today? select emoji"
