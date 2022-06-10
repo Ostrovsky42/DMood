@@ -1,4 +1,4 @@
-package libiary
+package library
 
 
 const SomethingWentWrong string="Hmm... something went wrong\n"+

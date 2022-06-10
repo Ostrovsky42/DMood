@@ -7,7 +7,7 @@ import (
 	"runtime"
 )
 
-func Init()  {
+func Init()*logrus.Logger  {
 	l:=logrus.New()
 	l.SetReportCaller(true)
 	l.Formatter=&logrus.TextFormatter{CallerPrettyfier: func(frame *runtime.Frame) (function string, file string) {
@@ -15,4 +15,5 @@ func Init()  {
 		return fmt.Sprintf("%s", frame.Func),fmt.Sprintf("%s,%d", fileName,frame.Line)
 	},
 		FullTimestamp: true}
+		return l
 }

@@ -1,9 +1,8 @@
 package bot_handle
 
 import (
-	"DMood/infrastructure/bot_handle/keybord"
+	"DMood/infrastructure/bot_handle/keyboard"
 	"DMood/infrastructure/storage"
-
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	log "github.com/sirupsen/logrus"
 )
@@ -17,16 +16,18 @@ type moodBot struct {
 	API        tgbotapi.BotAPI
 	UpdateCh   chan tgbotapi.Update
 	Storage    storage.DMoodStorage
-	KBord      keybord.KBoard
+	KBord      keyboard.KBoard
+	GraphicPath string
 }
 
-func New(chatId int, s storage.DMoodStorage, api tgbotapi.BotAPI, UpdateCh tgbotapi.UpdatesChannel) *moodBot {
+func New(chatId int, storage storage.DMoodStorage, api tgbotapi.BotAPI, KBord keyboard.KBoard, graphicPath string) *moodBot {
 	bot := moodBot{
 		ChatID:   chatId,
 		API:      api,
-		Storage:  s,
+		Storage:  storage,
 		UpdateCh: make(chan tgbotapi.Update, 100),
-		KBord:    keybord.NewKeyboard(),
+		KBord:    KBord,
+		GraphicPath: graphicPath,
 	}
 	bot.State = bot.HandleMessage
 	return &bot
@@ -40,10 +41,10 @@ func (b *moodBot) Update() {
 
 func (b *moodBot) HandleMessage(update *tgbotapi.Update) stateFn {
 	if update.Message != nil {
-
-		if command := update.Message.Command(); command != "" {
+		
+		if command:=update.Message.Command(); command!=""{
 			return b.SwitchCommand(command, update.Message.Chat.ID, update)
-		}
+		}		
 		//b.API.Send(tgbotapi.Animation{FileName: })
 		b.SetCommandKeyboard("мя","open", update.Message.Chat.ID)
 
@@ -92,6 +93,21 @@ func (b *moodBot) SetCommandKeyboard(text string, io string, chatID int64) {
 	switch io {
 	case "open":
 		msg.ReplyMarkup = b.KBord.CommandKeyboard
+	case "close":
+		msg.ReplyMarkup = tgbotapi.NewRemoveKeyboard(true)
+	}
+
+	if _, err := b.API.Send(msg); err != nil {
+		log.Error(err)
+	}
+
+}
+
+func (b *moodBot) SetTimeKeyboard(text string, io string, chatID int64) {
+	msg := tgbotapi.NewMessage(chatID, text)
+	switch io {
+	case "open":
+		msg.ReplyMarkup = b.KBord.TimeKeyboard
 	case "close":
 		msg.ReplyMarkup = tgbotapi.NewRemoveKeyboard(true)
 	}

@@ -10,10 +10,14 @@ type DBConfig struct {
 	DBName   string
 }
 
+type BotConfig struct {
+	TgToken string
+	PngPath string
+}
 
 type Config struct {
-	TgToken string
     DBConfig
+	BotConfig
 }
 
 func NewConfig() *Config {
@@ -25,7 +29,10 @@ func NewConfig() *Config {
 			Password: getEnv("DB_PASSWORD", ""),
 			DBName: getEnv("DB_NAME", ""),
 		},
+		BotConfig: BotConfig{
 		TgToken: getEnv("TG_TOKEN",""),
+		PngPath: getEnv("PNG_PATH",""),
+		},
 	}
 }
 

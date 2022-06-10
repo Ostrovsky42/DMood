@@ -1,1 +1,1 @@
-package localservices
+package local_service

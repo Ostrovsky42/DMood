@@ -1,11 +1,12 @@
 CREATE TABLE IF NOT EXISTS public.users
 (
-    user_id integer NOT NULL,
+    user_id bigint NOT NULL,
     setting json NOT NULL DEFAULT '{}'::json,
-    enabled_statistic bool NOT NULL DEFAULT true 
+    user_name character varying COLLATE pg_catalog."default" NOT NULL DEFAULT 'Прекрасный человек'::character varying,
+    enabled_statistic boolean NOT NULL DEFAULT true,
+    request_time smallint DEFAULT 20,
     CONSTRAINT users_pkey PRIMARY KEY (user_id)
 )
-
 
 CREATE TABLE IF NOT EXISTS public.mood
 (

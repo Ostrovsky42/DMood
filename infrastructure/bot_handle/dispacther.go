@@ -1,82 +1,78 @@
 package bot_handle
 
 import (
+	"DMood/config"
+	"DMood/domain"
+	"DMood/infrastructure/bot_handle/keyboard"
 	"DMood/infrastructure/storage"
+	"DMood/local_service"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	log "github.com/sirupsen/logrus"
+	"strconv"
 	"sync"
 )
 
-// Bot is the interface that must be implemented by your definition of
-// the struct thus it represent each open session with a user on Telegram.
 type IBot interface {
-	// Update will be called upon receiving any update from Telegram.
 	Update(*tgbotapi.Update)
 }
 
+type NewBotFn func(chatId int,s storage.DMoodStorage, api tgbotapi.BotAPI, kBoard keyboard.KBoard, graphicPath string) *moodBot
 
-type NewBotFn func(chatId int,s storage.DMoodStorage, api tgbotapi.BotAPI, UpdateCh tgbotapi.UpdatesChannel) *moodBot
 
-
-// The Dispatcher passes the updates from the Telegram Bot API to the Bot instance
-// associated with each chatID. When a new chat ID is found, the provided function
-// of type NewBotFn will be called.
 type Dispatcher struct {
 	api        *tgbotapi.BotAPI
 	sessionMap map[int]moodBot
-	newBot     func(chatId int,s storage.DMoodStorage, api tgbotapi.BotAPI,UpdateCh tgbotapi.UpdatesChannel) *moodBot
+	newBot     func(chatId int,s storage.DMoodStorage, api tgbotapi.BotAPI,kBoard keyboard.KBoard, graphicPath string) *moodBot
 	updates    *tgbotapi.UpdatesChannel
-	mu         sync.Mutex
+	scheduler  *local_service.Scheduler
 	storage    storage.DMoodStorage
+	graphicPath string
+	kBoard 	   keyboard.KBoard
+	mu         sync.Mutex
 }
 
-// NewDispatcher returns a new instance of the Dispatcher object.
-// Calls the Update function of the bot associated with each chat ID.
-// If a new chat ID is found, newBotFn will be called first.
-func NewDispatcher(token string,s storage.DMoodStorage, newBotFn NewBotFn) *Dispatcher {
-	api, err := tgbotapi.NewBotAPI(token)
+func NewDispatcher(conf config.BotConfig,storage storage.DMoodStorage) *Dispatcher {
+	api, err := tgbotapi.NewBotAPI(conf.TgToken)
 	if err != nil {
 		log.Fatal(err)
 	}
 	//api.Debug = true
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
-
 	updates,err := api.GetUpdatesChan(u)
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	log.Info("Authorized on account %s", api.Self)
 	d := &Dispatcher{
 		api:        api,
 		sessionMap: make(map[int]moodBot),
-		newBot:     newBotFn,
+		newBot:     New,
 		updates:    &updates,
-		storage: s,
+		scheduler: local_service.NewScheduler(),
+		storage: storage,
+		graphicPath:conf.PngPath,
+		kBoard : keyboard.NewKeyboard(),
 	}
 	go d.listen()
-
+	d.StartScheduler()
 	return d
 }
 
-// DelSession deletes the Bot instance, seen as a session, from the
-// map with all of them.
 func (d *Dispatcher) DelSession(chatID int) {
 	d.mu.Lock()
 	delete(d.sessionMap, chatID)
 	d.mu.Unlock()
 }
 
-// AddSession allows to arbitrarily create a new Bot instance.
 func (d *Dispatcher) AddSession(chatID int) {
 	d.mu.Lock()
 	if _, isIn := d.sessionMap[chatID]; !isIn {
-//		d.sessionMap[chatID] = d.newBot(chatID)
 	}
 	d.mu.Unlock()
 }
 
-// Poll is a wrapper function for PollOptions.
 func (d *Dispatcher) Poll() error {
 	return d.PollOptions(true, tgbotapi.UpdateConfig{Timeout: 120})
 }
@@ -114,10 +110,11 @@ func (d *Dispatcher) PollOptions(dropPendingUpdates bool, opts tgbotapi.UpdateCo
 	return nil
 }
 
-func (d *Dispatcher) instance(chatID int) (moodBot, bool) {
+func (d *Dispatcher) instance(chatID int,update tgbotapi.Update) (moodBot, bool) {
 	bot, ok := d.sessionMap[chatID]
-	if !ok {
-		newBot := d.newBot(chatID, d.storage, *d.api, *d.updates)
+		if !ok {		
+		//	user,err:=d.storage.GetUser(update.Message.From.ID)// todo get
+		newBot := d.newBot(chatID, d.storage, *d.api, d.kBoard, d.graphicPath)
 		d.mu.Lock()
 		d.sessionMap[chatID] = *newBot
 		d.mu.Unlock()
@@ -158,14 +155,40 @@ for {
 		default:
 			continue
 		}
-
-		bot,ok:= d.instance(int(chatID))
-		if !ok{
-			go bot.Update()			
-		}
-
-		bot.UpdateCh<-update
+		d.updateBot(int(chatID),update)
 	}
 }
 }
 
+func (d *Dispatcher) StartScheduler()  {
+log.Info("start Scheduler")
+d.scheduler.Process()
+for hour:=range d.scheduler.Time{
+	users,err:=d.storage.GetUsersByNotificationTime(hour)
+	if err!=nil{
+		log.Error("GetUsersByNotificationTime:",err)
+	}
+	for _,user:=range users{
+	go	func(user domain.User){
+		userId,_:=strconv.Atoi(user.UserId)
+		update:=prepareUpdateForNotification(userId)
+		d.updateBot(userId,update)
+		}(user)		
+	}
+}
+}
+
+func prepareUpdateForNotification(userId int)tgbotapi.Update{
+	chat:=tgbotapi.Chat{ID: int64(userId)}
+	ent:=[]tgbotapi.MessageEntity{{Type: "bot_command",Offset: 0,Length:11}}
+	msg:=tgbotapi.Message{Text:"/set_rating",Chat: &chat,Entities: &ent}
+	return  tgbotapi.Update{Message:&msg}
+}
+
+func (d *Dispatcher)updateBot(userId int,update tgbotapi.Update)  {
+	bot,ok:= d.instance(userId,update)
+	if !ok{
+		go bot.Update()
+	}
+	bot.UpdateCh <-update
+}

@@ -2,11 +2,11 @@ package bot_handle
 
 import (
 	"DMood/domain"
-	"DMood/localservices"
+	"DMood/local_service"
 	"fmt"
-	"io/ioutil"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	log "github.com/sirupsen/logrus"
+	"io/ioutil"
 )
 
 func (b *moodBot) HandleGetRating(update *tgbotapi.Update) stateFn {
@@ -14,9 +14,16 @@ func (b *moodBot) HandleGetRating(update *tgbotapi.Update) stateFn {
 	if err != nil {
 		b.SendTextMessage(err.Error(), update.Message.Chat.ID)
 	}
-	localservices.Getpng(mood)
-	hehehhe(b)
-	
+	err=local_service.Getpng(mood,b.GraphicPath)
+	if err!=nil{
+	b.SendTextMessage(err.Error(), update.Message.Chat.ID)//todo log it
+	return b.HandleMessage
+	}
+	if err=SendRatingPng(b);err!=nil{
+	b.SendTextMessage(err.Error(), update.Message.Chat.ID)//todo log it
+	return b.HandleMessage
+	}
+
 	return b.HandleMessage
 }
 
@@ -30,9 +37,8 @@ func PrintTable( mood []domain.Mood,b *moodBot,update *tgbotapi.Update ){
 	}
 }
 
-func hehehhe(b *moodBot) {
-
-photoBytes, err := ioutil.ReadFile("C:/Users/Serj/go/src/DMood/localservices/myMood.png")
+func SendRatingPng(b *moodBot) error {
+photoBytes, err := ioutil.ReadFile(b.GraphicPath)
 if err != nil {
 	log.Error(err)
 }
@@ -43,8 +49,8 @@ file := tgbotapi.FileBytes{
 
 message, err := b.API.Send(tgbotapi.NewDocumentUpload(int64(b.ChatID), file))
 if err!=nil{
-	log.Fatal(err,  message)
-
+	log.Error(err,  message)
+return err
 }
-
+return nil
 }

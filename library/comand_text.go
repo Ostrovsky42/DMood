@@ -1,4 +1,4 @@
-package libiary
+package library
 
 const HelpText string= "/set_rating- Fill in the rating, description of the day and new ideas once a day\n"+
 "/change_rating- If you made a mistake or decided to change the assessment of the day\n"+

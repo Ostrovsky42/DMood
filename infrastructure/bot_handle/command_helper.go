@@ -1,7 +1,7 @@
 package bot_handle
 
 import (
-	lib "DMood/libiary"
+	lib "DMood/library"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	log "github.com/sirupsen/logrus"
 )
@@ -19,7 +19,8 @@ func (b *moodBot) SwitchCommand(command string, chatId int64, update *tgbotapi.U
 			log.Error(e)
 			b.SendTextMessage("not registered", chatId)
 		} else {
-			b.SetCommandKeyboard("Done", "open", chatId)
+			b.SetTimeKeyboard("select notification time", "open", chatId)
+			return b.HandleSetNotificationTime
 		}
 		return b.HandleMessage
 
@@ -36,13 +37,14 @@ func (b *moodBot) SwitchCommand(command string, chatId int64, update *tgbotapi.U
 		return b.HandleChangeRating
 
 	case "get_rating":
-		b.UpdateCh <- *update
-		return b.HandleGetRating
+		return b.HandleGetRating(update)
 
-	case "fuck":
-		b.UpdateCh <- *update
-		return b.HandleFuck
+	case "change_notification":
+		b.SetTimeKeyboard("set new notification time","open",chatId)
+		return b.HandleSetNotificationTime(update)
 	}
+
+
 
 	b.SendTextMessage("What is the command?", chatId)
 	return b.HandleMessage

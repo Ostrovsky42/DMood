@@ -7,15 +7,15 @@ import (
 type KBoard struct {
 	CommandKeyboard tgbotapi.ReplyKeyboardMarkup
 	RatingKeyboard  tgbotapi.InlineKeyboardMarkup
-	TimeKeyboard  tgbotapi.InlineKeyboardMarkup
+	TimeKeyboard    tgbotapi.InlineKeyboardMarkup
 }
 
 func NewKeyboard()KBoard{
 
 	CommandKeyboard :=tgbotapi.NewReplyKeyboard(
-					[]tgbotapi.KeyboardButton{tgbotapi.KeyboardButton{Text: "/set_rating"},tgbotapi.KeyboardButton{Text: "/get_rating"}},
-					[]tgbotapi.KeyboardButton{tgbotapi.KeyboardButton{Text: "/help"},tgbotapi.KeyboardButton{Text: "/change_rating"}},
-					[]tgbotapi.KeyboardButton{tgbotapi.KeyboardButton{Text: ""}},
+					[]tgbotapi.KeyboardButton{{Text: "/set_rating"},{Text: "/get_rating"}},
+					[]tgbotapi.KeyboardButton{{Text: "/help"},{Text: "/change_rating"}},
+					[]tgbotapi.KeyboardButton{{Text: ""}},
 				)
 	CommandKeyboard.OneTimeKeyboard=true
 

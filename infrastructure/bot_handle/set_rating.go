@@ -1,10 +1,8 @@
 package bot_handle
 
 import (
-	"DMood/libiary"
+	"DMood/library"
 	"strconv"
-	"strings"
-
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	log "github.com/sirupsen/logrus"
 )
@@ -21,7 +19,7 @@ func GetRating(update *tgbotapi.Update, API *tgbotapi.BotAPI) string {
 }
 
 func IsSayNo(msg string)bool{
-	if strings.Contains(msg, "No") || strings.Contains(msg, "no") {
+	if msg=="No" || msg=="no" {
 	return true
 	}
 	return false
@@ -36,23 +34,23 @@ func IsRating(callbackRating string) bool {
 }
 
 func (b *moodBot) HandleRating(update *tgbotapi.Update) stateFn {
-	var callbackRating string = ""
+	var callbackRating string
 	if update.CallbackQuery != nil {
 		callbackRating = GetRating(update, &b.API)
 		if !IsRating(callbackRating) {
-			b.SendTextMessage(libiary.IsNotRating,int64(update.CallbackQuery.From.ID))
+			b.SendTextMessage(library.IsNotRating,int64(update.CallbackQuery.From.ID))
 			return b.HandleRating
 		}
 		e := b.Storage.SaveDayRating(update.CallbackQuery.From.ID, callbackRating)
 		if e != nil {
-			b.SendTextMessage(libiary.SomethingWentWrong,int64(update.CallbackQuery.From.ID))
+			b.SendTextMessage(library.SomethingWentWrong,int64(update.CallbackQuery.From.ID))
 			return b.HandleMessage
 		}
 		b.SendTextMessage("Send day description", int64(update.CallbackQuery.From.ID))
 		return b.HandleDescription
 	} else {
 		if IsRating(update.Message.Text) {
-			b.SendTextMessage(libiary.IsNotRating,int64(update.CallbackQuery.From.ID))
+			b.SendTextMessage(library.IsNotRating,int64(update.CallbackQuery.From.ID))
 			return b.HandleRating
 		}
 		if IsSayNo(update.Message.Text){
@@ -67,7 +65,7 @@ func (b *moodBot) HandleDescription(update *tgbotapi.Update) stateFn {
 	if IsSayNo(update.Message.Text) {
 		b.SendTextMessage("ok:(", update.Message.Chat.ID)
 			return b.HandleMessage
-	} //todo delete?
+	}
 	b.Storage.SaveDayDescription(update.Message)
 	b.SendTextMessage("Send day idea", update.Message.Chat.ID)
 	return b.HandleDayIdea
